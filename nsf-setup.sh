@@ -33,6 +33,7 @@ function selectOption() {
         10 80 "${#options[@]}"
     )
 
+    local i=0
     for MOUNT in "${options[@]}"; do
         SCREEN_ARGS+=("$MOUNT")
         SCREEN_ARGS+=( "OFF" )
@@ -49,13 +50,13 @@ function getAnswer() {
     local defaultValue=""
 
     # if set, $3 is the default answer for the question
-    if [[ -z $3 ]]; then
+    if [[ ! -z $3 ]]; then
         defaultValue=$3
     fi
     local SCREEN_ARGS=(
         --title "$title"
         --inputbox "$question:" 
-        10 80 "$defaultValue"
+        10 80 $defaultValue
     )
 
     whiptail_out=$(whiptail "${SCREEN_ARGS[@]}" 3>&1 1>&2 2>&3)
@@ -73,7 +74,7 @@ function questions() {
     NFS_SHARE=""
 
     if NFS_MOUNTS=$(showmount -e 10.0.0.14 --no-headers  | awk '{print $1}' | tr '\n ' ','); then
-        if NFS_SHARE=$(selectOption "Select NFS Share" "Select NFS Share" "$NFS_MOUNTS"); then
+        if NFS_SHARE=$(selectOption "Select NFS Share" "Select NFS Share" $NFS_MOUNTS); then
             echo "oooh yeah!"
         else 
             echo "Couldn't select NFS Share :("
@@ -94,8 +95,7 @@ function questions() {
     IFS=$origIFS
 
     LOCAL_MOUNT_POINT=""
-    # shellcheck disable=SC2128
-    LOCAL_MOUNT_POINT=$(getAnswer "Create new folder under /mnt/" "What is the mount point name?" "$defaultMountPoint")
+    LOCAL_MOUNT_POINT=$(getAnswer "Create new folder under /mnt/" "What is the mount point name?" $defaultMountPoint)
 
     IFS=$oldIfs
 }
@@ -106,22 +106,22 @@ apt install nfs-common -y
 
 # get nfs info
 questions
-ensureNotEmpty "$NFS_SHARE"
-ensureNotEmpty "$LOCAL_MOUNT_POINT"
+ensureNotEmpty $NFS_SHARE
+ensureNotEmpty $LOCAL_MOUNT_POINT
 
 MOUNT_PATH="/mnt/$LOCAL_MOUNT_POINT"
 NFS_PATH="10.0.0.14:$NFS_SHARE"
 
 
 if [[ ! -d $MOUNT_PATH ]]; then
-    echo "Creating mount path $MOUNT_PATH" && mkdir "$MOUNT_PATH"
-    echo "Mounting NFS share $NFS_PATH" && mount "$NFS_PATH" "$MOUNT_PATH"
+    echo "Creating mount path $MOUNT_PATH" && mkdir $MOUNT_PATH
+    echo "Mounting NFS share $NFS_PATH" && mount $NFS_PATH $MOUNT_PATH
     echo "Adding NFS Mounts to /etc/fstab"
     echo "$NFS_PATH $MOUNT_PATH nfs defaults 0 0" >> /etc/fstab
 else 
     echo "Mount path $MOUNT_PATH already exists..."
     echo "Attempting to mount anyways..."
-    mount "$NFS_PATH" "$MOUNT_PATH"
+    mount $NFS_PATH $MOUNT_PATH
 
     echo "Did NOT add NFS Mounts to /etc/fstab"
 fi
